@@ -10,7 +10,9 @@ const IG_PASSWORD = process.env.IG_PASSWORD;
 
 const agent = superagent.agent();
 
-const openPage = () => {
+var webCookies = module.exports.webCookies;
+
+const openPage = module.exports.openPage = () => {
   return new Bluebird((resolve, reject) => {
     agent
      .get('https://www.instagram.com/accounts/login/')
@@ -20,16 +22,16 @@ const openPage = () => {
         if (err || !res.ok) {
           return reject(err);
         } else {
-          const cookies = _.reduce(res.header['set-cookie'], (all, object) => {
+          webCookies = _.reduce(res.header['set-cookie'], (all, object) => {
             return _.extend(all, cookie.parse(object));
           }, {})
-          return resolve(cookies);
+          return resolve();
        }
      });
   });
 }
 
-const login = (cookies) => {
+const login = module.exports.login = () => {
   return new Bluebird((resolve, reject) => {
     agent
      .post('https://www.instagram.com/accounts/login/ajax/')
@@ -39,13 +41,13 @@ const login = (cookies) => {
      .set('X-Instagram-AJAX', 1)
      .set('Accept', '*/*')
      .set('X-Requested-With', 'XMLHttpRequest')
-     .set('X-CSRFToken', cookies.csrftoken)
+     .set('X-CSRFToken', webCookies.csrftoken)
      .set('Referer', 'https://www.instagram.com/')
      .set('Accept-Encoding', 'gzip, deflate, br')
      .set('Accept-Language', 'en-US,en;q=0.8')
      .set('Cookie', util.format(
        'mid=%s; csrftoken=%s; rur=%s',
-       cookies.mid, cookies.csrftoken, cookies.rur)
+       webCookies.mid, webCookies.csrftoken, webCookies.rur)
      )
      .send({username: IG_USERNAME, password: IG_PASSWORD})
      .withCredentials()
@@ -56,16 +58,16 @@ const login = (cookies) => {
          if(!res.body.authenticated){
             return reject(new Error("Cannot Login"));
          }
-         const cookies = _.reduce(res.header['set-cookie'], (all, object) => {
+         webCookies = _.reduce(res.header['set-cookie'], (all, object) => {
            return _.extend(all, cookie.parse(object));
          }, {})
-         return resolve(cookies);
+         return resolve();
        }
      });
   });
 }
 
-const logout = (cookies) => {
+const logout = module.exports.logout = () => {
   return new Bluebird((resolve, reject) => {
     agent
      .post('https://www.instagram.com/accounts/logout/')
@@ -77,23 +79,27 @@ const logout = (cookies) => {
      .set('Accept-Encoding', 'gzip, deflate, br')
      .set('Accept-Language', 'en-US,en;q=0.8')
      .set('Upgrade-Insecure-Requests', 1)
-     .set('Cookie', util.format('mid=%s; csrftoken=%s; rur=%s; sessionid=%s; ds_user_id=%s', cookies.mid, cookies.csrftoken, cookies.rur, cookies.sessionid, cookies.ds_user_id))
-     .send({csrfmiddlewaretoken: cookies.csrftoken})
+     .set('Cookie', util.format(
+       'mid=%s; csrftoken=%s; rur=%s; sessionid=%s; ds_user_id=%s',
+       webCookies.mid, webCookies.csrftoken, webCookies.rur,
+       webCookies.sessionid, webCookies.ds_user_id
+     ))
+     .send({csrfmiddlewaretoken: webCookies.csrftoken})
      .withCredentials()
      .end(function(err, res){
        if (err || !res.ok) {
          return reject(err);
        } else {
-         const cookies = _.reduce(res.header['set-cookie'], function(all, object) {
+         cookies = _.reduce(res.header['set-cookie'], function(all, object) {
            return _.extend(all, cookie.parse(object));
          }, {})
-         return resolve(cookies);
+         return resolve();
        }
      });
   });
 }
 
-const getUserID = (username) => {
+const getUserID = module.exports.getUserID = (username) => {
   return new Bluebird((resolve, reject) => {
     agent
      .get(util.format('https://www.instagram.com/%s/?__a=1', username))
@@ -101,7 +107,7 @@ const getUserID = (username) => {
      .end(function(err, res){
         if (err || !res.ok) {
           if(res.status == 404){
-            return resolve({});
+            return resolve(undefined);
           }
           return reject(err);
         } else {
@@ -111,7 +117,7 @@ const getUserID = (username) => {
    });
 }
 
-const getStories = (userId, cookies) => {
+const getStories = module.exports.getStories = (userId) => {
   return new Bluebird((resolve, reject) => {
     agent
      .get(util.format('https://i.instagram.com/api/v1/feed/user/%s/story/', userId))
@@ -120,7 +126,10 @@ const getStories = (userId, cookies) => {
      .set('Referer', 'https://www.instagram.com/')
      .set('Accept-Encoding', 'gzip, deflate, br')
      .set('Accept-Language', 'en-US,en;q=0.8')
-     .set('Cookie', util.format('sessionid=%s; ds_user_id=%s; csrftoken=%s', cookies.sessionid, cookies.ds_user_id, cookies.csrftoken))
+     .set('Cookie', util.format(
+       'sessionid=%s; ds_user_id=%s; csrftoken=%s',
+       webCookies.sessionid, webCookies.ds_user_id, webCookies.csrftoken
+     ))
      .withCredentials()
      .end(function(err, res){
         if (err || !res.ok) {
@@ -131,35 +140,14 @@ const getStories = (userId, cookies) => {
           }
           return resolve(_.map(res.body.reel.items, (item) => {
             return {
-              type: item.media_type,
-              media: item.media_type == 1 ? _.head(item.image_versions2.candidates) : _.head(item.video_versions)
+              type: item.media_type == 1 ? 'image' : 'video',
+              originalContentUrl: item.media_type == 1 ?
+               _.head(item.image_versions2.candidates).url :
+               _.head(item.video_versions).url,
+              previewImageUrl: _.last(item.image_versions2.candidates).url
             };
           }));
        }
      });
    });
 }
-
-const main = () => {
-  let cookies;
-  Bluebird.resolve()
-    .then(() => openPage())
-    .then((firstCookie) => {
-      cookies = firstCookie;
-      return login(cookies);
-    })
-    .then((loginCookie) => {
-      cookies = loginCookie;
-      return getUserID('someusername');
-    })
-    .then((userResult) => {
-      return getStories(userResult.id, cookies);
-    })
-    .then((medias) => console.log(medias))
-    .catch((error) => {
-      console.error(error);
-    })
-    .finally(() => logout(cookies))
-}
-
-main();
