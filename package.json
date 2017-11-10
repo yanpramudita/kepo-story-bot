@@ -1,0 +1,20 @@
+{
+  "name": "kepo-story-bot",
+  "version": "1.0.0",
+  "description": "A Line Bot that used to view someone's story on IG without them knowing",
+  "main": "index.js",
+  "scripts": {
+    "start": "nf start",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "async": "^2.6.0",
+    "bluebird": "^3.5.1",
+    "cookie": "^0.3.1",
+    "cookie-parser": "^1.4.3",
+    "foreman": "^2.0.0",
+    "superagent": "^3.8.1"
+  }
+}
