@@ -53,7 +53,7 @@ const generateColumnsFromUsers = (users) => {
   return _.map(_.take(users,10), (user) => {
     return {
       thumbnailImageUrl: user.profile_pic_url,
-      title: user.username,
+      title: util.format('%s%s',user.username, user.is_verified ? ' \u2714' : ''),
       text: util.format('Mau kepoin storynya %s?', _.isEmpty(user.full_name) ? 'doi' : user.full_name),
       actions: [
         generatePostbackAction(
