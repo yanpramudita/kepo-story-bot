@@ -32,7 +32,6 @@ router.get('/get/:username/stories', function(req, res) {
       if(_.isUndefined(user)){
         return Bluebird.reject(404);
       }
-      res.json(user)
     })
     .then((user_id) => instagramAgent.getStories(user_id))
     .then((stories) => {
