@@ -117,6 +117,30 @@ const getUserID = module.exports.getUserID = (username) => {
    });
 }
 
+const searchUserByUsername = module.exports.searchUserByUsername = (username) => {
+  return new Bluebird((resolve, reject) => {
+    agent
+     .get(util.format('https://i.instagram.com/api/v1/users/search/?q=%s', username))
+     .set('User-Agent','Instagram 10.26.0 (iPhone7,2; iOS 10_1_1; en_US; en-US; scale=2.00; gamut=normal; 750x1334) AppleWebKit/420+')
+     .set('Accept', '*/*')
+     .set('Referer', 'https://www.instagram.com/')
+     .set('Accept-Encoding', 'gzip, deflate, br')
+     .set('Accept-Language', 'en-US,en;q=0.8')
+     .set('Cookie', util.format(
+       'sessionid=%s; ds_user_id=%s; csrftoken=%s',
+       webCookies.sessionid, webCookies.ds_user_id, webCookies.csrftoken
+     ))
+     .withCredentials()
+     .end(function(err, res){
+        if (err || !res.ok) {
+          return reject(err);
+        } else {
+          return resolve(res.body.users);
+       }
+     });
+   });
+}
+
 const getStories = module.exports.getStories = (userId) => {
   return new Bluebird((resolve, reject) => {
     agent

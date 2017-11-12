@@ -46,10 +46,31 @@ router.get('/get/:username/stories', function(req, res) {
     });
 });
 
+router.get('/search/user', function(req, res) {
+  if(_.isUndefined(req.query.username)){
+    return sendBadRequest(req,res);
+  }
+
+  instagramAgent.searchUserByUsername(req.query.username)
+    .then((users) => {
+      res.json(users)
+    })
+    .catch((err) => {
+      return sendError(req, res);
+    });
+});
+
 function sendNotFound(req, res) {
   return res.status(404).json({
     status: 404,
     message: "Not Found"
+  });
+}
+
+function sendBadRequest(req, res) {
+  return res.status(400).json({
+    status: 400,
+    message: "Bad Request"
   });
 }
 
