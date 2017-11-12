@@ -32,6 +32,9 @@ const handleMessage = (message, source) => {
     case 'text':
       return instagramAgent.searchUserByUsername(message.text)
         .then((users) => {
+          if(_.isEmpty(users)){
+            return sendText(source.userId, 'Yah kita ga nemu username kek gitu nih, coba yang lain deh.');
+          }
           return Bluebird.all([
             sendCarousel(
               source.userId,
