@@ -32,6 +32,7 @@ router.get('/get/:username/stories', function(req, res) {
       if(_.isUndefined(user)){
         return Bluebird.reject(404);
       }
+      return Bluebird.resolve(user);
     })
     .then((user) => instagramAgent.getStories(user.id))
     .then((stories) => {
@@ -41,7 +42,7 @@ router.get('/get/:username/stories', function(req, res) {
       if(err == 404){
         return sendNotFound(req, res);
       }
-      return sendError(req, res);
+      return sendError(req, res, err);
     });
 });
 
