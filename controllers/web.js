@@ -33,7 +33,7 @@ router.get('/get/:username/stories', function(req, res) {
         return Bluebird.reject(404);
       }
     })
-    .then((user_id) => instagramAgent.getStories(user_id))
+    .then((user) => instagramAgent.getStories(user.id))
     .then((stories) => {
       res.json(stories)
     })
